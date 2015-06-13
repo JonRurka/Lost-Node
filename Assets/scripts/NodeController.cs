@@ -129,7 +129,7 @@ public class NodeController : MonoBehaviour {
             camSc.player = player;
             camSc.dampVelocity = 15;
             playerInstance = player.GetComponent<PlayerScript>();
-            playerInstance.ConnectToNode(playerPos);
+            Loom.QueueOnMainThread(() => playerInstance.ConnectToNode(playerPos));
         });
     }
 }

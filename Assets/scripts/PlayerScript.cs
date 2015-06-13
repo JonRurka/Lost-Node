@@ -27,7 +27,11 @@ public class PlayerScript : MonoBehaviour
 
     public Vector3 GetClosest()
     {
-        Vector3 currentLocations = transform.position;
+        return GetClosest(transform.position);
+    }
+
+    public Vector3 GetClosest(Vector3 currentLocations)
+    {
         float closestDistance = float.MaxValue;
         Vector3[] nodeLocations = nearbyNodes.ToArray();
         Vector3 closestNode = Vector3.zero;
@@ -47,7 +51,6 @@ public class PlayerScript : MonoBehaviour
     {
         if (NodeController.Instance.nodes.ContainsKey(node))
         {
-            Debug.Log("Connecting to node " + node);
             freeMode = false;
             CameraScript.Instance.SetFreeMode(freeMode);
             if (CurrentNode != null)

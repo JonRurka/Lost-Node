@@ -10,14 +10,23 @@ public class CameraScript : MonoBehaviour
     public bool freeMode = true;
     public float zoomIn = 2;
     public float zoomOut = 5;
+    public LayerMask linelayer;
 
     public float distance;
     public Vector2 direction;
     public Vector2 force;
 
+    private PlayerScript playerInst;
     private Rigidbody2D playerRigid;
     private Vector3 velocity = Vector3.zero;
     private Camera cam;
+    private LineRenderer lastLineRender;
+    private Vector3 lastBoxPos = Vector3.zero;
+
+    private bool MoveingPlayer;
+    private Vector3 oldPlayerPosition;
+    private Vector3 NewPlayerPosition;
+    private float t;
 
     void Awake()
     {
@@ -28,6 +37,7 @@ public class CameraScript : MonoBehaviour
 	// Use this for initialization
 	void Start () {
         playerRigid = player.GetComponent<Rigidbody2D>();
+	    playerInst = playerRigid.GetComponent<PlayerScript>();
 	}
 	
 	// Update is called once per frame
@@ -54,10 +64,54 @@ public class CameraScript : MonoBehaviour
 	    }
 	    else
 	    {
-	        
+	        if (Input.GetMouseButton(0))
+	        {
+	            Ray ray = cam.ScreenPointToRay(Input.mousePosition);
+	            RaycastHit hit;
+	            if (Physics.Raycast(ray, out hit, 100, (1 << LayerMask.NameToLayer("LineCollider"))))
+	            {
+	                if (hit.transform.parent.GetComponent<LineRenderer>() != null)
+	                {
+	                    Vector3 colliderPosition = hit.transform.position;
+	                    if (colliderPosition != lastBoxPos)
+	                    {
+	                        if (lastLineRender != null)
+	                            lastLineRender.SetColors(Color.blue, Color.cyan);
+	                        lastBoxPos = colliderPosition;
+	                        lastLineRender = hit.transform.parent.GetComponent<LineRenderer>();
+	                        lastLineRender.SetColors(Color.red, Color.yellow);
+	                    }
+	                }
+	            }
+	        }
+	        if (MoveingPlayer)
+	        {
+	            playerRigid.position = Vector2.Lerp(oldPlayerPosition, NewPlayerPosition, t);
+	            t += Time.deltaTime * 2;
+	            if (t > 1)
+	            {
+	                MoveingPlayer = false;
+                    Invoke("NewNode", 0.3f);
+                    t = 0;
+                }
+	        }
 	    }
 
         transform.position = new Vector3(player.transform.position.x, player.transform.position.y, transform.position.z);
+    }
+
+    void OnGUI()
+    {
+        if (!freeMode && lastLineRender != null)
+        {
+            if (GUI.Button(new Rect(Screen.width/2 - 50, Screen.height*9/10f, 100, 50), "Connect"))
+            {
+                MoveingPlayer = true;
+                NodeScript curNode = lastLineRender.transform.parent.GetComponent<NodeScript>();
+                oldPlayerPosition = playerRigid.position;
+                NewPlayerPosition = curNode.GetEndLocation(lastLineRender);
+            }
+        }
     }
 
     public void SetFreeMode(bool freeMode)
@@ -69,6 +123,19 @@ public class CameraScript : MonoBehaviour
         {
             cam.orthographicSize = 2;
             playerRigid.velocity = Vector2.zero;
+            if (lastLineRender != null)
+                lastLineRender.SetColors(Color.blue, Color.cyan);
+            lastLineRender = null;
         }
+    }
+
+    void NewNode()
+    {
+        Vector3 closestNode = playerInst.GetClosest();
+        NodeController.Instance.nodes[oldPlayerPosition].HideConnections();
+        NodeController.Instance.nodes[closestNode].ShowConnections();
+        playerInst.DisconnectFromNode();
+        playerInst.ConnectToNode(closestNode);
+        lastLineRender = null;
     }
 }
